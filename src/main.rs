@@ -75,6 +75,23 @@ fn get_embd_from_context(context: &GraphExecutionContext, vector_size: usize) ->
     // println!("\n[EMBED] {}", embd);
     serde_json::from_str(embd).unwrap()
 }
+fn check_level(text: &str) -> u32 {
+    let mut level = 0;
+    if text.starts_with("#") {
+        for (_, c) in text.char_indices() {
+            if c == '#' {
+                level += 1;
+            } else {
+                break;
+            }
+        }
+        if level <= 6 && text.chars().nth(level).unwrap() == ' ' {
+            return level as u32;
+        } 
+    }
+    0
+}
+
 fn parse_parameter(args: &Vec<String>) -> ArgMatches {
     let matches = Command::new("create_embeddings")
         .version("1.0")
@@ -85,6 +102,7 @@ fn parse_parameter(args: &Vec<String>) -> ArgMatches {
                 .long("maximum_context_length")
                 .short('m')
                 .value_name("maximum_context_length")
+                .value_parser(clap::value_parser!(usize))
                 .help("Maximum context length limitation. If exceeds it, the context will be truncated.")
         )
         .arg(
@@ -92,7 +110,18 @@ fn parse_parameter(args: &Vec<String>) -> ArgMatches {
                 .long("start_vector_id")
                 .short('s')
                 .value_name("start_vector_id")
+                .default_value("0")
+                .value_parser(clap::value_parser!(u64))
                 .help("Start vector id. It defaults to 0"),
+        )
+        .arg(
+            Arg::new("heading_level")
+            .long("heading_level")
+            .short('l')
+            .value_name("heading_level")
+            .default_value("1")
+            .help("Mardown heading level for generate chunks.")
+            .value_parser(clap::value_parser!(u32)),
         )
         .get_matches_from(args.clone().split_off(4));
     return matches;
@@ -121,23 +150,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let client = qdrant::Qdrant::new();
 
-    let start_vector_id = match matches.get_one::<String>("start_vector_id") {
-        Some(v) => v.trim().parse().unwrap(),
-        None => 0,
-    };
+    let start_vector_id = *matches.get_one("start_vector_id").unwrap();
+    let heading_level = *matches.get_one("heading_level").unwrap();
     let mut id : u64 = 0;
     let mut current_section = String::new();
     let file = File::open(file_name)?;
     let reader = BufReader::new(file);
     let mut code_mode = false;
+    let mut prefix: Vec<String>  = vec!();
     for line_result in reader.lines() {
         let line = line_result?;
         if line.trim().starts_with("```") {
             code_mode = !code_mode;
         }
-        if line.trim().is_empty() && (!current_section.trim().is_empty()) && !code_mode {
-            if let Some(maximum) = matches.get_one::<String>("maximum_context_length") {
-                let maximum = maximum.trim().parse().unwrap();
+        let level = check_level(&line);
+        let section_heading = check_level(&current_section);
+        if !current_section.trim().is_empty() 
+            && (level == heading_level || level < heading_level && section_heading == heading_level ){
+            let mut prefix_data:String = String::new();
+            for head in prefix.iter() {
+                if check_level(&head) >= section_heading{
+                    break;
+                }
+                prefix_data += head;
+                prefix_data += "\n";
+            }
+            current_section = prefix_data + &current_section;
+            if let Some(&maximum) = matches.get_one::<usize>("maximum_context_length") {
                 if current_section.len() > maximum {
                     println!("\n [WARNING] Index: {} exceed maximum contex length limitation.", id);
                     current_section = current_section.chars().take(maximum).collect();
@@ -147,18 +186,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             id += 1;
             // Start a new section
             current_section.clear();
-        } else {
-            // We do not limit the size of the chunk. If it is over the model context size, we
-            // would want it to fail explicitly
-            current_section.push_str(&line);
-            current_section.push('\n');
         }
+        if level < heading_level && level != 0 {
+            while let Some(last) = prefix.last() {
+                if check_level(last) >= level {
+                    prefix.pop();
+                }else {
+                    break;
+                }   
+            }
+            prefix.push(line.clone());
+        }
+        current_section.push_str(&line);
+        current_section.push('\n');
     }
 
     // The last segment
     if !current_section.trim().is_empty() {
-        if let Some(maximum) = matches.get_one::<String>("maximum_context_length") {
-            let maximum = maximum.trim().parse().unwrap();
+        let section_heading = check_level(&current_section);
+        let mut prefix_data:String = String::new();
+        for head in prefix.iter() {
+            if check_level(&head) >= section_heading{
+                break;
+            }
+            prefix_data += head;
+            prefix_data += "\n";
+        }
+        current_section = prefix_data + &current_section;
+        if let Some(&maximum) = matches.get_one::<usize>("maximum_context_length") {
             if current_section.len() > maximum {
                 println!("\n [WARNING] Index: {} exceed maximum contex length limitation.", id);
                 current_section = current_section.chars().take(maximum).collect();
