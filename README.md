@@ -1,6 +1,4 @@
-# embedding-tools
-# RAG Embeddings with Heading-Level Chunking
-
+# Embedding-tools
 This repository is a modification of the original [YuanTony/chemistry-assistant](https://github.com/YuanTony/chemistry-assistant/tree/main/rag-embeddings) repository. The only difference is that instead of using blank lines as the basis for chunking the input text, a `heading_level` parameter has been added to chunk the text based on the Markdown heading levels. Additionally, for each non-top-level chunk, the preceding heading levels will be prepended to the chunk.
 
 ## Prerequisites

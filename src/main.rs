@@ -165,7 +165,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
         let level = check_level(&line);
         let section_heading = check_level(&current_section);
-        if !current_section.trim().is_empty() 
+        if !current_section.trim().is_empty() && level != 0
             && (level == heading_level || level < heading_level && section_heading == heading_level ){
             let mut prefix_data:String = String::new();
             for head in prefix.iter() {
