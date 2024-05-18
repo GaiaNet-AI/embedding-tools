@@ -93,9 +93,9 @@ fn check_level(text: &str) -> u32 {
 }
 
 fn parse_parameter(args: &Vec<String>) -> ArgMatches {
-    let matches = Command::new("create_embeddings")
+    let matches = Command::new("markdown_embed")
         .version("1.0")
-        .about("create_embeddings CLI")
+        .about("Create embeddings from a markdown docs")
         .disable_help_subcommand(true)
         .arg(
             Arg::new("maximum_context_length")
@@ -123,6 +123,15 @@ fn parse_parameter(args: &Vec<String>) -> ArgMatches {
             .help("Mardown heading level for generate chunks.")
             .value_parser(clap::value_parser!(u32)),
         )
+        .arg(
+            Arg::new("ctx_size")
+            .long("ctx_size")
+            .short('c')
+            .value_name("ctx_size")
+            .default_value("512")
+            .help("Context size. It defaults to 512.")
+            .value_parser(clap::value_parser!(usize)),
+        )
         .get_matches_from(args.clone().split_off(4));
     return matches;
 }
@@ -133,11 +142,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let collection_name: &str = &args[2];
     let vector_size: usize = args[3].trim().parse().unwrap();
     let file_name: &str = &args[4];
+
     let matches = parse_parameter(&args);
+    let ctx_size: usize = *matches.get_one("ctx_size").unwrap();
+
     let mut options = json!({});
     options["embedding"] = serde_json::Value::Bool(true);
-    // options["ctx-size"] = serde_json::Value::from(vector_size);
-    // let ctx_size = options["ctx-size"].as_u64().unwrap();
+    options["ctx-size"] = serde_json::Value::from(ctx_size);
+    options["batch-size"] = serde_json::Value::from(ctx_size);
 
     let graph =
         GraphBuilder::new(GraphEncoding::Ggml, ExecutionTarget::AUTO)
