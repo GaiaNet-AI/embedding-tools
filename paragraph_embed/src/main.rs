@@ -76,9 +76,9 @@ fn get_embd_from_context(context: &GraphExecutionContext, vector_size: usize) ->
     serde_json::from_str(embd).unwrap()
 }
 fn parse_parameter(args: &Vec<String>) -> ArgMatches {
-    let matches = Command::new("create_embeddings")
+    let matches = Command::new("paragraph_embed")
         .version("1.0")
-        .about("create_embeddings CLI")
+        .about("Create embeddings from paragraphs of text")
         .disable_help_subcommand(true)
         .arg(
             Arg::new("maximum_context_length")
@@ -94,6 +94,13 @@ fn parse_parameter(args: &Vec<String>) -> ArgMatches {
                 .value_name("start_vector_id")
                 .help("Start vector id. It defaults to 0"),
         )
+        .arg(
+            Arg::new("ctx_size")
+                .long("ctx_size")
+                .short('c')
+                .value_name("ctx_size")
+                .help("context size. It defaults to 512"),
+        )
         .get_matches_from(args.clone().split_off(4));
     return matches;
 }
@@ -104,10 +111,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let collection_name: &str = &args[2];
     let vector_size: usize = args[3].trim().parse().unwrap();
     let file_name: &str = &args[4];
+
     let matches = parse_parameter(&args);
+    let ctx_size= match matches.get_one::<String>("ctx_size") {
+        Some(v) => v.trim().parse().unwrap(),
+        None => 512,
+    };
+
     let mut options = json!({});
     options["embedding"] = serde_json::Value::Bool(true);
-    // options["ctx-size"] = serde_json::Value::from(vector_size);
+    options["ctx-size"] = serde_json::Value::from(ctx_size);
+    options["batch-size"] = serde_json::Value::from(ctx_size);
     // let ctx_size = options["ctx-size"].as_u64().unwrap();
 
     let graph =
