@@ -83,7 +83,7 @@ wasmedge --dir .:. \
    paragraph_embed.wasm embedding chemistry_book 384 chemistry.txt -s 5 -m 1024
 ```
 
-Example: use the `nomic-embed-text-v1.5-f16` model, which has a context length of 8192 and vector size of 768. Note that your `chemistry_book` vector collection must be set up to be 768 dimensions.
+Example: use the `nomic-embed-text-v1.5.f16` model, which has a context length of 8192 and vector size of 768. Note that your `chemistry_book` vector collection must be set up to be 768 dimensions.
 
 ```
 curl -LO https://huggingface.co/gaianet/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5.f16.gguf
@@ -93,10 +93,16 @@ wasmedge --dir .:. \
    paragraph_embed.wasm embedding chemistry_book 768 chemistry.txt -c 8192
 ```
 
-## Create a snapshot for sharing
+## See the vector collection in Qdrant
+
+```
+curl http://localhost:6333/collections/chemistry_book
+```
+
+Create a snapshot for sharing
 
 ```
 curl -X POST 'http://localhost:6333/collections/chemistry_book/snapshots'
 ```
 
-You can find the snapshot file in QDrant's snapshot directory.
+You can find the snapshot file in Qdrant's snapshot directory.
