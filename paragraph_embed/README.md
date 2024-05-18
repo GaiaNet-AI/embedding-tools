@@ -17,6 +17,20 @@ curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/insta
 source /home/azureuser/.bashrc
 ```
 
+Create a vector collection called `chemistry_book`. Here we create a vector collection with 384 dimensions. You will need to adjust this if you use a different embedding model.
+
+```
+curl -X PUT 'http://localhost:6333/collections/chemistry_book' \
+  -H 'Content-Type: application/json' \
+  --data-raw '{
+    "vectors": {
+      "size": 384,
+      "distance": "Cosine",
+      "on_disk": true
+    }
+  }'
+```
+
 ## Build the wasm app
 
 ```
@@ -72,11 +86,17 @@ wasmedge --dir .:. \
 Example: use the `nomic-embed-text-v1.5-f16` model, which has a context length of 8192 and vector size of 768. Note that your `chemistry_book` vector collection must be set up to be 768 dimensions.
 
 ```
-curl -LO https://huggingface.co/gaianet/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5-f16.gguf
+curl -LO https://huggingface.co/gaianet/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5.f16.gguf
 
 wasmedge --dir .:. \
-  --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5-f16.gguf \
+  --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
    paragraph_embed.wasm embedding chemistry_book 768 chemistry.txt -c 8192
 ```
 
+## Create a snapshot for sharing
 
+```
+curl -X POST 'http://localhost:6333/collections/chemistry_book/snapshots'
+```
+
+You can find the snapshot file in QDrant's snapshot directory.
