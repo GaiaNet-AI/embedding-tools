@@ -175,7 +175,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if line.trim().starts_with("```") {
             code_mode = !code_mode;
         }
-        let level = check_level(&line);
+        let mut level = 0;
+        if !code_mode {
+            level = check_level(&line);
+        }
         let section_heading = check_level(&current_section);
         if !current_section.trim().is_empty() && level != 0
             && (level == heading_level || level < heading_level && section_heading == heading_level ){

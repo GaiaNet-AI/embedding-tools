@@ -53,17 +53,17 @@ Replace `collection_name` with the name of your Qdrant collection, `input.md` wi
 
 Additionally, you can use the following optional arguments:
 
-- `-m` or `--maximum_context_length`: Specify a context length to truncate and warn for each text segment that exceeds the specified length.
-- `-s` or `--start_vector_id`: Specify the starting vector ID, which allows you to run the application multiple times on different documents within the same vector collection.
-- `-l` or `--heading_level`: Specify the markdown heading level to chunk the text on markdown documents.
+- `-l` or `--heading_level`: Specify the markdown heading level to chunk the text on markdown documents. This defaults to 1.
 - `-c` or `--ctx_size` to specify the context size of the input. This defaults to 512.
+- `-s` or `--start_vector_id`: Specify the starting vector ID, which allows you to run the application multiple times on different documents within the same vector collection.
+- `-m` or `--maximum_context_length`: Specify a context length to truncate and warn for each text segment that exceeds the specified length.
 
 Example usage with optional arguments:
 
 ```
 wasmedge --dir .:. \
   --nn-preload embedding:GGML:AUTO:all-MiniLM-L6-v2-ggml-model-f16.gguf \
-  markdown_embed.wasm embedding my_book 384 input.md --heading_level 2 -s 5 -m 1024 -l 2
+  markdown_embed.wasm embedding my_book 384 input.md -s 5 -m 1024 -l 2
 ```
 
 Example: use the `nomic-embed-text-v1.5.f16` model, which has a context length of 8192 and vector size of 768. Note that your `my_book` vector collection must be set up to be 768 dimensions.
