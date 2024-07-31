@@ -1,6 +1,9 @@
 # CSV to embeddings 
 
-This tool chunks an input markdown file based on the Markdown heading levels, and then creates a vector embedding for each chunk in a vector database. Additionally, for each non-top-level chunk, the preceding heading levels will be prepended to the chunk.
+The CSV file has two columns. The first is full text column for the source text of a chunk or a chapter.
+The second is a summary of the full text. This tool turns the summary text into vectors, and store
+each vector with the associated full text. That allows queries to be matched to the more concise summary
+but have the full text in the RAG context.
 
 ## Prerequisites
 
@@ -8,12 +11,15 @@ Please follow the instructions from the original repository to set up the follow
 
 [Start the Qdrant vector database](https://qdrant.tech/documentation/quick-start/) at `localhost:6333`.
 
-[Install WasmEdge with GGML plugin](https://wasmedge.org/docs/start/install) and download the embedding model
-as follows.
+[Install WasmEdge with GGML plugin](https://wasmedge.org/docs/start/install).
 
 ```
 curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s
+```
 
+Download the embedding model.
+
+```
 curl -LO https://huggingface.co/gaianet/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5.f16.gguf
 ```
 
@@ -46,10 +52,8 @@ To generate embeddings, run the following command:
 ```
 wasmedge --dir .:. \
   --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
-  csv_embed.wasm embedding collection_name 768 input.csv
+  csv_embed.wasm embedding my_book 768 input.csv
 ```
-
-Replace `collection_name` with the name of your Qdrant collection, `input.csv` with the path to your input CSV file.
 
 Additionally, you can use the following optional arguments:
 
@@ -60,5 +64,11 @@ You can now query or snapshot the `my_book` vector collection on the local Qdran
 
 ```
 curl 'http://localhost:6333/collections/my_book'
+```
+
+You can always delete the vector collection and start over.
+
+```
+curl -X DELETE 'http://localhost:6333/collections/my_book'
 ```
 
