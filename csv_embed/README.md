@@ -72,3 +72,16 @@ You can always delete the vector collection and start over.
 curl -X DELETE 'http://localhost:6333/collections/my_book'
 ```
 
+## Create a CSV file
+
+We start from a single column CSV file. Each row has only one cell, and it contains a complete article or chapter. Let's call it `source_text.csv`.
+
+Run a Python script to add a second column and create a new CSV file `vectors.csv`. The second column contains the summarization and QnA of the source text. It is then converted into vectors using the above `csv_embed.wasm` utility.
+
+```
+python3 generate_vectors.py source_text.csv vectors.csv
+```
+
+The script uses the `llama.us.gaianet.network` node to summarize and generate QnA pairs based on the source text. You can switch to a different LLM (e.g., GPT-4) by changing the configuration at the top of the Python file.
+
+
