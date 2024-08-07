@@ -52,7 +52,7 @@ To generate embeddings, run the following command:
 ```
 wasmedge --dir .:. \
   --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
-  csv_embed.wasm embedding my_book 768 input.csv
+  csv_embed.wasm embedding my_book 768 input.csv -c 8192
 ```
 
 Additionally, you can use the following optional arguments:
