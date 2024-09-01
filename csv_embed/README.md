@@ -66,6 +66,12 @@ You can now query or snapshot the `my_book` vector collection on the local Qdran
 curl 'http://localhost:6333/collections/my_book'
 ```
 
+Create a snapshot for sharing
+
+```
+curl -X POST 'http://localhost:6333/collections/my_book/snapshots'
+```
+
 You can always delete the vector collection and start over.
 
 ```

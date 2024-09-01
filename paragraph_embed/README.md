@@ -106,3 +106,14 @@ curl -X POST 'http://localhost:6333/collections/chemistry_book/snapshots'
 ```
 
 You can find the snapshot file in Qdrant's snapshot directory.
+
+## Create a paragraph text file from a folder of text files
+
+The following Python scripts reads a local `folder` and combines all text files in the folder into
+a large plain text file. The input text files are separated by blank lines.
+The blank lines within each source text file are removed. The result file is
+ready for vector creation.
+
+```
+python3 paras_from_folder.py folder output.txt
+```
