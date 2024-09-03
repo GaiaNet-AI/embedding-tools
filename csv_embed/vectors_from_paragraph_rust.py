@@ -15,7 +15,7 @@ def summarize(source_text):
         messages=[
             {
                 "role": "system",
-                "content": "Respond with a comprehensive summary of the text in the user message",
+                "content": "You are a teacher of the Rust programming language. Respond with a comprehensive summary of the text in the user message. Cover conceptual topics, techniques and conclusions in your summary.",
             },
             {
                 "role": "user",
@@ -34,7 +34,7 @@ def qgen(source_text):
         messages=[
             {
                 "role": "system",
-                "content": "Respond with a list of 10 questions. The text in the user message must contain specific answers to each question. Each question must be complete without references to unclear context such as \"this team\" or \"that lab\". Each question must be on its own line. Just list the questions without any introductory text or numbers.",
+                "content": "You are a teacher of the Rust programming language. Respond with a list of 10 questions. Each question must be about a concept or technique in Rust programming. The text in the user message must contain specific answers to each question. The question should not reference lines or variables in code listings in the user message. Each question must be on its own line. Just list the questions without any introductory text or numbers.",
             },
             {
                 "role": "user",
@@ -53,7 +53,7 @@ def agen(source_text, question):
         messages=[
             {
                 "role": "system",
-                "content": "Give a comprehensive and well-reasoned answer to the user question strictly based on the context below.\n" + source_text,
+                "content": "Give a comprehensive and well-reasoned answer to the user question about the Rust programming language strictly based on the context below.\n" + source_text,
             },
             {
                 "role": "user",
@@ -78,7 +78,7 @@ def main():
             current_line = current_line + 1
             print(str(current_line) + ' of ' + str(len(paras)))
             print(p + "\n\n\n")
-        
+
             result = []
             result.append(p)
             result.append(summarize(p))

@@ -15,7 +15,7 @@ def summarize(source_text):
         messages=[
             {
                 "role": "system",
-                "content": "Respond with a comprehensive summary of the text in the user message",
+                "content": "You are a pastor at a Bible church. Respond with a summary of the text in the user message.",
             },
             {
                 "role": "user",
@@ -34,7 +34,7 @@ def qgen(source_text):
         messages=[
             {
                 "role": "system",
-                "content": "Respond with a list of 10 questions. The text in the user message must contain specific answers to each question. Each question must be complete without references to unclear context such as \"this team\" or \"that lab\". Each question must be on its own line. Just list the questions without any introductory text or numbers.",
+                "content": "You are a pastor at a Bible church. Respond with a list of 8 questions that people commonly ask in church. The text in the user message must contain specific answers to each question. Each question must be on its own line. Make sure that you include the first question in the user message in the list. Just list the questions without any introductory text or numbers.",
             },
             {
                 "role": "user",
@@ -53,7 +53,7 @@ def agen(source_text, question):
         messages=[
             {
                 "role": "system",
-                "content": "Give a comprehensive and well-reasoned answer to the user question strictly based on the context below.\n" + source_text,
+                "content": "Give a Bible-based answer to the user question strictly based on the context below.\n" + source_text,
             },
             {
                 "role": "user",
@@ -71,14 +71,14 @@ def main():
 
     with open(arguments[0], 'r', newline='') as txtfile:
         txt_data = txtfile.read()
-        paras = re.split('^\s*$', txt_data, flags=re.MULTILINE)
+        paras = re.split('^\s*$', txt_data, flags=re.MULTILINE) 
 
         current_line = 0
         for p in paras:
             current_line = current_line + 1
             print(str(current_line) + ' of ' + str(len(paras)))
             print(p + "\n\n\n")
-        
+
             result = []
             result.append(p)
             result.append(summarize(p))
