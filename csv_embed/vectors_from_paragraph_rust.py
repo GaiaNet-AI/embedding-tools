@@ -78,6 +78,8 @@ def main():
             current_line = current_line + 1
             print(str(current_line) + ' of ' + str(len(paras)))
             print(p + "\n\n\n")
+            if len(p.strip()) == 0:
+                continue
 
             result = []
             result.append(p)
