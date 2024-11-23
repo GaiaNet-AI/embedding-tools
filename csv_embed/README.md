@@ -40,7 +40,7 @@ curl -X PUT 'http://localhost:6333/collections/my_book' \
 ## Build the wasm app
 
 ```
-RUSTFLAGS="--cfg wasmedge --cfg tokio_unstable" cargo build --target wasm32-wasi --release
+cargo build --target wasm32-wasi --release
 
 cp target/wasm32-wasi/release/csv_embed.wasm .
 ```
@@ -54,11 +54,6 @@ wasmedge --dir .:. \
   --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
   csv_embed.wasm embedding my_book 768 input.csv -c 8192
 ```
-
-Additionally, you can use the following optional arguments:
-
-- `-c` or `--ctx_size` to specify the context size of the input. This defaults to 512.
-- `-s` or `--start_vector_id`: Specify the starting vector ID, which allows you to run the application multiple times on different documents within the same vector collection.
 
 You can now query or snapshot the `my_book` vector collection on the local Qdrant server.
 

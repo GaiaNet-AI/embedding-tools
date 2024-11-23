@@ -34,7 +34,7 @@ curl -X PUT 'http://localhost:6333/collections/chemistry_book' \
 ## Build the wasm app
 
 ```
-RUSTFLAGS="--cfg wasmedge --cfg tokio_unstable" cargo build --target wasm32-wasi --release
+cargo build --target wasm32-wasi --release
 
 cp target/wasm32-wasi/release/paragraph_embed.wasm .
 ```
@@ -49,39 +49,7 @@ wasmedge --dir .:. \
   paragraph_embed.wasm embedding chemistry_book 384 chemistry.txt
 ```
 
-After it is done, you can check the vectors and their associated payloads by their IDs. THe example below returns the first and last vectors in the `chemistry_book` collection.
-
-```
-curl 'http://localhost:6333/collections/chemistry_book/points' \
-  -H 'Content-Type: application/json' \
-  --data-raw '{
-    "ids": [0, 1231],
-    "with_payload": true,
-    "with_vector": false
-  }'
-```
-
-You can also pass the following options to the program.
-
-* Using `-m` or `--maximum_context_length` to specify a context length in the CLI argument. That is to truncate and warn for each text segment that goes above the context length.
-* Using `-s` or `--start_vector_id` to specify the start vector ID in the CLI argument. This will allow us to run this app multiple times on multiple documents on the same vector collection.
-* Using `-c` or `--ctx_size` to specify the context size of the input. This defaults to 512.
-
-Example: Use the `all-MiniLM-L6-v2-ggml-model-f16` model, which has a context length of 256 and vector size of 384.
-
-```
-wasmedge --dir .:. \
-  --nn-preload embedding:GGML:AUTO:all-MiniLM-L6-v2-ggml-model-f16.gguf \
-   paragraph_embed.wasm embedding chemistry_book 384 chemistry.txt
-```
-
-Example: Use the `all-MiniLM-L6-v2-ggml-model-f16` model but start at index 5 and truncate input to 1024 chars to avoid context length overflow.
-
-```
-wasmedge --dir .:. \
-  --nn-preload embedding:GGML:AUTO:all-MiniLM-L6-v2-ggml-model-f16.gguf \
-   paragraph_embed.wasm embedding chemistry_book 384 chemistry.txt -s 5 -m 1024
-```
+You can also pass the `-c` or `--ctx_size` options to specify the context size of the input. This defaults to 512.
 
 Example: use the `nomic-embed-text-v1.5.f16` model, which has a context length of 8192 and vector size of 768. Note that your `chemistry_book` vector collection must be set up to be 768 dimensions.
 

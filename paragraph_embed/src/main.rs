@@ -9,19 +9,23 @@ use wasmedge_wasi_nn::{
     TensorType,
 };
 use clap::{Arg, ArgMatches, Command};
+use uuid::Uuid;
 
-async fn generate_upsert (context: &mut GraphExecutionContext, data: &str, client: &qdrant::Qdrant, id: u64, collection_name: &str, vector_size: usize, start_vector_id: u64) {
-    set_data_to_context(context, data.as_bytes().to_vec()).unwrap();
+async fn generate_upsert (context: &mut GraphExecutionContext, full_text: &str, index_text: &str, client: &qdrant::Qdrant, uuid: &str, collection_name: &str, vector_size: usize) -> Result<(), Error> {
+    set_data_to_context(context, index_text.as_bytes().to_vec()).unwrap();
     match context.compute() {
         Ok(_) => (),
         Err(Error::BackendError(BackendError::ContextFull)) => {
             println!("\n[INFO] Context full");
+            return Err(Error::BackendError(BackendError::ContextFull));
         }
         Err(Error::BackendError(BackendError::PromptTooLong)) => {
             println!("\n[INFO] Prompt too long");
+            return Err(Error::BackendError(BackendError::PromptTooLong));
         }
         Err(err) => {
             println!("\n[ERROR] {}", err);
+            return Err(err);
         }
     }
     let embd = get_embd_from_context(&context, vector_size);
@@ -31,18 +35,19 @@ async fn generate_upsert (context: &mut GraphExecutionContext, data: &str, clien
         embd_vec.push(embd["embedding"][idx].as_f64().unwrap() as f32);
     }
 
-    println!("{} : ID={} Size={} Points ID={}", OffsetDateTime::now_utc(), id, embd_vec.len(), start_vector_id + id);
+    println!("{} : Size={} Points ID={}", OffsetDateTime::now_utc(), embd_vec.len(), uuid);
 
     let mut points = Vec::<Point>::new();
     points.push(Point{
-        id: PointId::Num(start_vector_id + id), 
+        id: PointId::Uuid(uuid.to_string()), 
         vector: embd_vec,
-        payload: json!({"source": data}).as_object().map(|m| m.to_owned()),
+        payload: json!({"source": full_text}).as_object().map(|m| m.to_owned()),
     });
 
     // Upsert each point (you can also batch points for upsert)
     let r = client.upsert_points(collection_name, points).await;
     println!("Upsert points result is {:?}", r);
+    Ok(())
 }
 
 fn set_data_to_context(
@@ -81,20 +86,6 @@ fn parse_parameter(args: &Vec<String>) -> ArgMatches {
         .about("Create embeddings from paragraphs of text")
         .disable_help_subcommand(true)
         .arg(
-            Arg::new("maximum_context_length")
-                .long("maximum_context_length")
-                .short('m')
-                .value_name("maximum_context_length")
-                .help("Maximum context length limitation. If exceeds it, the context will be truncated.")
-        )
-        .arg(
-            Arg::new("start_vector_id")
-                .long("start_vector_id")
-                .short('s')
-                .value_name("start_vector_id")
-                .help("Start vector id. It defaults to 0"),
-        )
-        .arg(
             Arg::new("ctx_size")
                 .long("ctx_size")
                 .short('c')
@@ -118,11 +109,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         None => 512,
     };
 
+    println!("\n Context size is {}", ctx_size);
     let mut options = json!({});
     options["embedding"] = serde_json::Value::Bool(true);
     options["ctx-size"] = serde_json::Value::from(ctx_size);
     options["batch-size"] = serde_json::Value::from(ctx_size);
-    // let ctx_size = options["ctx-size"].as_u64().unwrap();
 
     let graph =
         GraphBuilder::new(GraphEncoding::Ggml, ExecutionTarget::AUTO)
@@ -135,35 +126,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let client = qdrant::Qdrant::new();
 
-    let start_vector_id = match matches.get_one::<String>("start_vector_id") {
-        Some(v) => v.trim().parse().unwrap(),
-        None => 0,
-    };
-    let mut id : u64 = 0;
     let mut current_section = String::new();
     let file = File::open(file_name)?;
     let reader = BufReader::new(file);
-    let mut code_mode = false;
     for line_result in reader.lines() {
         let line = line_result?;
-        if line.trim().starts_with("```") {
-            code_mode = !code_mode;
-        }
-        if line.trim().is_empty() && (!current_section.trim().is_empty()) && !code_mode {
-            if let Some(maximum) = matches.get_one::<String>("maximum_context_length") {
-                let maximum = maximum.trim().parse().unwrap();
-                if current_section.len() > maximum {
-                    println!("\n [WARNING] Index: {} exceed maximum contex length limitation.", id);
-                    current_section = current_section.chars().take(maximum).collect();
+        if line.trim().is_empty() && (!current_section.trim().is_empty()) {
+            println!("\n Current section size {}", current_section.len());
+            let uuid = Uuid::new_v4();
+            match generate_upsert(&mut context, &current_section, &current_section, &client, &uuid.to_string(), collection_name, vector_size).await {
+                Ok(_) => (),
+                Err(_err) => {
+                    let truncated_section : String = current_section.chars().take(2 * ctx_size).collect();
+                    println!("\n Try again with truncated text of size {}", truncated_section.len());
+                    let _ = generate_upsert(&mut context, &current_section, &truncated_section, &client, &uuid.to_string(), collection_name, vector_size).await;
                 }
             }
-            generate_upsert(&mut context, &current_section, &client, id, collection_name, vector_size, start_vector_id).await;
-            id += 1;
+
             // Start a new section
             current_section.clear();
+
         } else {
-            // We do not limit the size of the chunk. If it is over the model context size, we
-            // would want it to fail explicitly
             current_section.push_str(&line);
             current_section.push('\n');
         }
@@ -171,14 +154,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // The last segment
     if !current_section.trim().is_empty() {
-        if let Some(maximum) = matches.get_one::<String>("maximum_context_length") {
-            let maximum = maximum.trim().parse().unwrap();
-            if current_section.len() > maximum {
-                println!("\n [WARNING] Index: {} exceed maximum contex length limitation.", id);
-                current_section = current_section.chars().take(maximum).collect();
+        println!("\n Current section size {}", current_section.len());
+        let uuid = Uuid::new_v4();
+        match generate_upsert(&mut context, &current_section, &current_section, &client, &uuid.to_string(), collection_name, vector_size).await {
+            Ok(_) => (),
+            Err(_err) => {
+                println!("\n Try again with only a snippet of the input text.");
+                let truncated_section : String = current_section.chars().take(2 * ctx_size).collect();
+                let _ = generate_upsert(&mut context, &current_section, &truncated_section, &client, &uuid.to_string(), collection_name, vector_size).await;
             }
         }
-        generate_upsert(&mut context, &current_section, &client, id, collection_name, vector_size, start_vector_id).await;
     }
     Ok(())
 }

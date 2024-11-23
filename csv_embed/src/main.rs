@@ -10,19 +10,23 @@ use wasmedge_wasi_nn::{
     TensorType,
 };
 use clap::{Arg, ArgMatches, Command};
+use uuid::Uuid;
 
-async fn generate_upsert (context: &mut GraphExecutionContext, full: &str, summary: &str, client: &qdrant::Qdrant, id: u64, collection_name: &str, vector_size: usize, start_vector_id: u64) {
+async fn generate_upsert (context: &mut GraphExecutionContext, full: &str, summary: &str, client: &qdrant::Qdrant, uuid: &str, collection_name: &str, vector_size: usize) -> Result<(), Error> {
     set_data_to_context(context, summary.as_bytes().to_vec()).unwrap();
     match context.compute() {
         Ok(_) => (),
         Err(Error::BackendError(BackendError::ContextFull)) => {
             println!("\n[INFO] Context full");
+            return Err(Error::BackendError(BackendError::ContextFull));
         }
         Err(Error::BackendError(BackendError::PromptTooLong)) => {
             println!("\n[INFO] Prompt too long");
+            return Err(Error::BackendError(BackendError::PromptTooLong));
         }
         Err(err) => {
             println!("\n[ERROR] {}", err);
+            return Err(err);
         }
     }
     let embd = get_embd_from_context(&context, vector_size);
@@ -32,11 +36,11 @@ async fn generate_upsert (context: &mut GraphExecutionContext, full: &str, summa
         embd_vec.push(embd["embedding"][idx].as_f64().unwrap() as f32);
     }
 
-    println!("{} : ID={} Size={} Points ID={}", OffsetDateTime::now_utc(), id, embd_vec.len(), start_vector_id + id);
+    println!("{} : Size={} Points ID={}", OffsetDateTime::now_utc(), embd_vec.len(), uuid);
 
     let mut points = Vec::<Point>::new();
     points.push(Point{
-        id: PointId::Num(start_vector_id + id), 
+        id: PointId::Uuid(uuid.to_string()), 
         vector: embd_vec,
         payload: json!({"source": full}).as_object().map(|m| m.to_owned()),
     });
@@ -44,6 +48,7 @@ async fn generate_upsert (context: &mut GraphExecutionContext, full: &str, summa
     // Upsert each point (you can also batch points for upsert)
     let r = client.upsert_points(collection_name, points).await;
     println!("Upsert points result is {:?}", r);
+    Ok(())
 }
 
 fn set_data_to_context(
@@ -82,15 +87,6 @@ fn parse_parameter(args: &Vec<String>) -> ArgMatches {
         .version("1.0")
         .about("Create embeddings from a CSV docs")
         .disable_help_subcommand(true)
-        .arg(
-            Arg::new("start_vector_id")
-                .long("start_vector_id")
-                .short('s')
-                .value_name("start_vector_id")
-                .default_value("0")
-                .value_parser(clap::value_parser!(u64))
-                .help("Start vector id. It defaults to 0"),
-        )
         .arg(
             Arg::new("ctx_size")
             .long("ctx_size")
@@ -131,8 +127,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let client = qdrant::Qdrant::new();
 
-    let start_vector_id = *matches.get_one("start_vector_id").unwrap();
-    let mut id : u64 = 0;
     let file = File::open(file_name)?;
     let reader = BufReader::new(file);
     let mut rdr = csv::Reader::from_reader(reader);
@@ -141,8 +135,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             Ok(record) => {
                 let full = &record[0];
                 let summary = &record[1];
-                generate_upsert(&mut context, &full, &summary, &client, id, collection_name, vector_size, start_vector_id).await;
-                id += 1;
+                let uuid = Uuid::new_v4();
+                match generate_upsert(&mut context, &full, &summary, &client, &uuid.to_string(), collection_name, vector_size).await {
+                    Ok(_) => (),
+                    Err(_err) => {
+                        println!("\n FAILED summary: {}", &summary);
+                    }
+                }
             },
             Err(err) => {
                 println!("error reading CSV: {}", err);
