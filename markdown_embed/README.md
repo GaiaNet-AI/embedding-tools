@@ -34,7 +34,7 @@ curl -X PUT 'http://localhost:6333/collections/my_book' \
 ## Build the wasm app
 
 ```
-RUSTFLAGS="--cfg wasmedge --cfg tokio_unstable" cargo build --target wasm32-wasi --release
+cargo build --target wasm32-wasi --release
 
 cp target/wasm32-wasi/release/markdown_embed.wasm .
 ```
@@ -51,20 +51,7 @@ wasmedge --dir .:. \
 
 Replace `collection_name` with the name of your Qdrant collection, `input.md` with the path to your input markdown file, and `N` with the desired heading level for chunking (e.g., `2` for chunking at the second heading level).
 
-Additionally, you can use the following optional arguments:
-
-- `-l` or `--heading_level`: Specify the markdown heading level to chunk the text on markdown documents. This defaults to 1.
-- `-c` or `--ctx_size` to specify the context size of the input. This defaults to 512.
-- `-s` or `--start_vector_id`: Specify the starting vector ID, which allows you to run the application multiple times on different documents within the same vector collection.
-- `-m` or `--maximum_context_length`: Specify a context length to truncate and warn for each text segment that exceeds the specified length.
-
-Example usage with optional arguments:
-
-```
-wasmedge --dir .:. \
-  --nn-preload embedding:GGML:AUTO:all-MiniLM-L6-v2-ggml-model-f16.gguf \
-  markdown_embed.wasm embedding my_book 384 input.md -s 5 -m 1024 -l 2
-```
+Additionally, you can use the `-c` or `--ctx_size` parameters to specify the context size of the input. This defaults to 512.
 
 Example: use the `nomic-embed-text-v1.5.f16` model, which has a context length of 8192 and vector size of 768. Note that your `my_book` vector collection must be set up to be 768 dimensions.
 
