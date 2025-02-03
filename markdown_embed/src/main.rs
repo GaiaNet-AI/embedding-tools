@@ -139,6 +139,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     options["embedding"] = serde_json::Value::Bool(true);
     options["ctx-size"] = serde_json::Value::from(ctx_size);
     options["batch-size"] = serde_json::Value::from(ctx_size);
+    options["ubatch-size"] = serde_json::Value::from(ctx_size);
 
     let graph =
         GraphBuilder::new(GraphEncoding::Ggml, ExecutionTarget::AUTO)
