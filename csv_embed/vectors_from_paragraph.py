@@ -6,7 +6,7 @@ import re
 
 API_BASE_URL = "https://llama8b.gaia.domains/v1"
 MODEL_NAME = "llama"
-API_KEY = "GAIA"
+API_KEY = "gaia-NjhkMGM2NmUtMzg5Ny00YzFkLWI4YWQtYzMwMTA2MTQ0ZjE3-aCmbMEJizuL70Xu5"
 
 def summarize(source_text):
     client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
