@@ -40,7 +40,7 @@ curl -X PUT 'http://localhost:6333/collections/my_book' \
 ## Build the wasm app
 
 ```
-cargo build --target wasm32-wasi --release
+cargo build --target wasm32-wasip1 --release
 
 cp target/wasm32-wasi/release/csv_embed.wasm .
 ```

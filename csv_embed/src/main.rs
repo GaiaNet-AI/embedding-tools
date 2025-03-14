@@ -42,7 +42,7 @@ async fn generate_upsert (context: &mut GraphExecutionContext, full: &str, summa
     points.push(Point{
         id: PointId::Uuid(uuid.to_string()), 
         vector: embd_vec,
-        payload: json!({"source": full}).as_object().map(|m| m.to_owned()),
+        payload: json!({"source": full, "search": summary}).as_object().map(|m| m.to_owned()),
     });
 
     // Upsert each point (you can also batch points for upsert)
