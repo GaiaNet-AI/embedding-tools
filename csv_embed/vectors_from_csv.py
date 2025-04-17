@@ -3,7 +3,7 @@ import csv
 import sys
 import os
 
-API_BASE_URL = "https://llama8b.gaia.domains/v1"
+API_BASE_URL = "https://llama70b.gaia.domains/v1"
 MODEL_NAME = "llama"
 API_KEY = "gaia-NjhkMGM2NmUtMzg5Ny00YzFkLWI4YWQtYzMwMTA2MTQ0ZjE3-aCmbMEJizuL70Xu5"
 
